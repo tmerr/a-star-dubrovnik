@@ -87,7 +87,7 @@ def elevation_idx(lat, lon):
     the edge closest to it.
     """
     lat_idx = int(max(0, min(3600, round(lat*60*60 - 42*60*60))))
-    lon_idx = int(max(0, min(3600, round(lon*60*60 + 19*60*60))))
+    lon_idx = int(max(0, min(3600, round(lon*60*60 - 18*60*60))))
     return lat_idx*3601 + lon_idx
 
 
