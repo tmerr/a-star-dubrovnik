@@ -14,54 +14,60 @@ m_per_lon = 82
 nodedata = namedtuple('NodeData', 'x_m y_m z_m')
 
 
-def extract_info(xml_path, elevations_path):
-    """
-    Use the OpenStreetMaps XML file at the given path to build a tuple of:
-    1. A node graph represented as a node_id -> [node_id, ...] dictionary
-    2. A dictionary that maps node_id -> (x in meters, y in meters, elevation in meters)
+### XML parsing
 
-    Blows up in your face with an exception if it fails to open or read the file.
-    """
+def build_node_digraph(xml_root):
+    digraph = defaultdict(list)
 
-    tree = ET.parse(xml_path)
-    root = tree.getroot()
+    for child in xml_root.iterfind('way'):
+        if any((sub.get('k') == 'highway' for sub in child.iterfind('tag'))):
+            nds = list(child.iterfind('nd'))
+            for (n1, n2) in zip(nds, nds[1:]):
+                ref1 = int(n1.get('ref'))
+                ref2 = int(n2.get('ref'))
+                digraph[ref1].append(ref2)
+                digraph[ref2].append(ref1)
 
-    if root.tag != 'osm':
-        raise IOError('Expected root xml tag to be named "osm", got "{}".'.format(osm_elem.tag))
+    return digraph
 
-    version = root.get('version')
-    if version != '0.6':
-        print('Warning: Expected osm api version "0.6", got "{}".'.format(version))
 
-    id_to_data = {}
-    id_digraph = defaultdict(list)
+def build_ways(xml_root):
+    ways = {}
 
-    elevation_array = read_elevations(elevations_path)
+    for child in xml_root.iterfind('way'):
+        nds = [int(n.get('ref')) for n in child.iterfind('nd')]
+        tags = child.iterfind('tag')
 
-    for child in root:
-        if child.tag == 'node':
-            node_id = int(child.get('id'))
+        if not any((sub.get('k') == 'highway' for sub in tags)):
+            continue
 
-            lat = float(child.get('lat'))
-            lon = float(child.get('lon'))
+        wayname = None
+        for sub in tags:
+            if sub.get('k') == 'name':
+                wayname = sub.get('v')
 
-            y_m = lat * m_per_lat
-            x_m = lon * m_per_lon
-            z_m = elevation_array[elevation_idx(lat, lon)]
+        if not wayname is None:
+            ways[wayname] = nds
 
-            id_to_data[node_id] = nodedata(x_m, y_m, z_m)
-        elif child.tag == 'way':
-            if any((sub.get('k') == 'highway' for sub in child.iterfind('tag'))):
-                nds = list(child.iterfind('nd'))
-                for (n1, n2) in zip(nds, nds[1:]):
-                    ref1 = int(n1.get('ref'))
-                    ref2 = int(n2.get('ref'))
-                    id_digraph[ref1].append(ref2)
-                    id_digraph[ref2].append(ref1)
-        elif child.tag == 'relation':
-            pass
+    return ways
 
-    return (id_digraph, id_to_data)
+
+def build_node_data(xml_root, elevation_data):
+    node_data = {}
+
+    for child in xml_root.iterfind('node'):
+        node_id = int(child.get('id'))
+
+        lat = float(child.get('lat'))
+        lon = float(child.get('lon'))
+
+        y_m = lat * m_per_lat
+        x_m = lon * m_per_lon
+        z_m = elevation_data[elevation_idx(lat, lon)]
+
+        node_data[node_id] = nodedata(x_m, y_m, z_m)
+
+    return node_data
 
 
 def read_elevations(elevations_path):
@@ -87,6 +93,26 @@ def elevation_idx(lat, lon):
     lon_idx = int(max(0, min(3600, round(lon*60*60 - 18*60*60))))
     return lat_idx*3601 + lon_idx
 
+
+def read_xml(xml_path, elevations_path):
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
+    
+    if root.tag != 'osm':
+        raise IOError('Expected root xml tag to be named "osm", got "{}".'.format(osm_elem.tag))
+
+    version = root.get('version')
+    if version != '0.6':
+        print('Warning: Expected osm api version "0.6", got "{}".'.format(version))
+
+    graph = build_node_digraph(root)
+    ways = build_ways(root)
+    data = build_node_data(root, read_elevations(elevations_path))
+
+    return (graph, ways, data)
+
+
+### A* Algorithm
 
 def build_path(id_digraph, start, goal, history):
     lst = [goal]
@@ -125,7 +151,7 @@ def a_star(id_digraph, id_to_data, start, goal):
 
 
 def run():
-    (id_digraph, id_to_data) = extract_info('dbv.osm', 'N42E018.HGT')
+    (id_digraph, ways, id_to_data) = read_xml('dbv.osm', 'N42E018.HGT')
     print(a_star(id_digraph, id_to_data, 1825110022, 1825110033))
 
 

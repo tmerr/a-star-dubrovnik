@@ -118,7 +118,7 @@ class MyWin(Frame):
         self.last_y = event.y
 
 if __name__ == '__main__':
-    id_digraph, id_to_data = lab1.extract_info('dbv.osm', 'N42E018.HGT')
+    id_digraph, ways, id_to_data = lab1.read_xml('dbv.osm', 'N42E018.HGT')
     optimal_path, cost = None, None
     #optimal_path, cost = lab1.a_star(id_digraph, id_to_data, 'A', 'E')
 
