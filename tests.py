@@ -1,8 +1,8 @@
 from lab1 import *
 
 def test_elevation_idx():
-    assert elevation_idx(42, -19) == 0
-    assert elevation_idx(42.5, -18.5) == 1800*3601 + 1800
+    assert elevation_idx(42, 18) == 0
+    assert elevation_idx(42.5, 18.5) == 1800*3601 + 1800
 
 
 def test_a_star():
