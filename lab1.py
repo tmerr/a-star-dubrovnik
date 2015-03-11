@@ -51,16 +51,13 @@ def extract_info(xml_path, elevations_path):
 
             id_to_data[node_id] = nodedata(x_m, y_m, z_m)
         elif child.tag == 'way':
-            for tag in child.iterfind('tag'):
-                if tag.get('k') != 'highway':
-                    break
-
-            nds = list(child.iterfind('nd'))
-            for (n1, n2) in zip(nds, nds[1:]):
-                ref1 = int(n1.get('ref'))
-                ref2 = int(n2.get('ref'))
-                id_digraph[ref1].append(ref2)
-                id_digraph[ref2].append(ref1)
+            if any((sub.get('k') == 'highway' for sub in child.iterfind('tag'))):
+                nds = list(child.iterfind('nd'))
+                for (n1, n2) in zip(nds, nds[1:]):
+                    ref1 = int(n1.get('ref'))
+                    ref2 = int(n2.get('ref'))
+                    id_digraph[ref1].append(ref2)
+                    id_digraph[ref2].append(ref1)
         elif child.tag == 'relation':
             pass
 

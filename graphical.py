@@ -71,12 +71,13 @@ class MyWin(Frame):
 
         w.pack(fill=BOTH) # put canvas in window, fill the window
 
-        cb = Button(thewin, text="Button", command=self.click)
+        #cb = Button(thewin, text="Button", command=)
         # put the button in the window, on the right
         # I really have not much idea how Python/Tkinter layout managers work
-        cb.pack(side=RIGHT,pady=5)
+        #cb.pack(side=RIGHT,pady=5)
 
         thewin.pack()
+
 
     def update_lines(self):
         self.canvas.delete("all")
@@ -85,32 +86,36 @@ class MyWin(Frame):
             h = WINHEIGHT
             s = self.scale
             self.canvas.create_line(s*wd*lon1, s*h*lat1, s*wd*lon2, s*h*lat2)
-        #self.master.update()
+
+
+    def shift(self, dx, dy):
+        self.canvas.xview('scroll', int(dx), 'units')
+        self.canvas.yview('scroll', int(dy), 'units')
+        
 
     def zoom_in(self, event):
         self.scale *= 1.1
         self.update_lines()
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        self.shift(x*.1, y*.1)
+
 
     def zoom_out(self, event):
         self.scale /= 1.1
         self.update_lines()
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        self.shift(-x*(1-1/1.1), -y*(1-1/1.1))
+
 
     def click(self, event):
         self.last_x = event.x
         self.last_y = event.y
 
-    def move(self, event):
-        self.canvas.xview('scroll', self.last_x - event.x, 'units')
-        self.canvas.yview('scroll', self.last_y - event.y, 'units')
 
+    def move(self, event):
+        self.shift(self.last_x - event.x, self.last_y - event.y)
         self.last_x = event.x
         self.last_y = event.y
-
-    def mapclick(self,event):
-        # gives the x,y location of the click
-        # let's use that to move the circle
-        self.canvas.coords('greendot',event.x-5,event.y-5,event.x+5,event.y+5)
-
 
 if __name__ == '__main__':
     id_digraph, id_to_data = lab1.extract_info('dbv.osm', 'N42E018.HGT')
