@@ -44,7 +44,7 @@ def build_ways(xml_root):
         wayname = None
         for sub in tags:
             if sub.get('k') == 'name':
-                wayname = sub.get('v')
+                wayname = sub.get('v').lower()
 
         if not wayname is None:
             ways[wayname] = nds
@@ -146,13 +146,16 @@ def a_star(id_digraph, id_to_data, start, goal):
                 
                 heappush(frontier, (total_cost, successor))
 
-    path =  build_path(id_digraph, start, goal, history)
-    return (path, path_costs[goal])
+    if goal in history:
+        path =  build_path(id_digraph, start, goal, history)
+        return (path, path_costs[goal])
+    else:
+        return None
 
 
 def run():
     (id_digraph, ways, id_to_data) = read_xml('dbv.osm', 'N42E018.HGT')
-    print(a_star(id_digraph, id_to_data, 1825110022, 1825110033))
+    print(a_star(id_digraph, id_to_data, ways['gornji kono'.lower()][0], ways['bokeljska'][0]))
 
 
 if __name__ == '__main__':
