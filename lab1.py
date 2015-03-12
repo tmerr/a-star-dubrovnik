@@ -8,7 +8,7 @@ import struct
 
 
 m_per_lat = 111000
-m_per_lon = 82
+m_per_lon = 82000
 
 
 nodedata = namedtuple('NodeData', 'x_m y_m z_m')
@@ -89,7 +89,7 @@ def elevation_idx(lat, lon):
     counting forward. An elevation outside these bounds will return an index on
     the edge closest to it.
     """
-    lat_idx = int(max(0, min(3600, round(lat*60*60 - 42*60*60))))
+    lat_idx = int(max(0, min(3600, round(43*60*60 - lat*60*60))))
     lon_idx = int(max(0, min(3600, round(lon*60*60 - 18*60*60))))
     return lat_idx*3601 + lon_idx
 
@@ -125,13 +125,27 @@ def dist(a, b):
     return sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
 
 
+# TODO: figure out if this is an admissible heuristic
+def est_minutes(a, b):
+    '''Use Tobler's Hiking Function to estimate the amount of time it takes to travel from a to b'''
+    xy_dist = sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
+    if xy_dist == 0:
+        return 0
+    slope = (b.z_m - a.z_m)/xy_dist
+    km_per_h = 6*math.exp(-3.5 * abs(slope + 0.05))
+    km_per_min = km_per_h / 60
+    m_per_min = km_per_min * 1000
+    minutes = xy_dist / m_per_min
+    return minutes
+
+
 def a_star(id_digraph, id_to_data, start, goal):
     history = {}
     frontier = [(0, start)] # [(cost, node), ...] sorted least to greatest
     path_costs = defaultdict(int) # updated throughout search
 
     def heuristic(node_id):
-        return dist(id_to_data[node_id], id_to_data[goal])
+        return est_minutes(id_to_data[node_id], id_to_data[goal])
 
     while len(frontier) != 0:
         (cost, cur_node) = heappop(frontier)
@@ -139,7 +153,7 @@ def a_star(id_digraph, id_to_data, start, goal):
             if successor not in history:
                 history[successor] = cur_node
 
-                current_to_successor = dist(id_to_data[cur_node], id_to_data[successor])
+                current_to_successor = est_minutes(id_to_data[cur_node], id_to_data[successor])
                 path_costs[successor] = path_costs[cur_node] + current_to_successor
 
                 total_cost = path_costs[successor] + heuristic(successor)
