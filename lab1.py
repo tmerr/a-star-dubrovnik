@@ -11,7 +11,7 @@ import graphical
 
 m_per_lat = 111000
 m_per_lon = 82000
-only_highways = False
+only_highways = True
 
 
 nodedata = namedtuple('NodeData', 'x_m y_m z_m')
@@ -75,7 +75,7 @@ def build_node_data(xml_root, elevation_data):
 
         y_m = lat * m_per_lat
         x_m = lon * m_per_lon
-        z_m = elevation_data[elevation_idx(lat, lon)]
+        z_m = lerped_elevation(elevation_data, lat, lon)
 
         node_data[node_id] = nodedata(x_m, y_m, z_m)
 
@@ -90,6 +90,29 @@ def read_elevations(elevations_path):
 
     data.byteswap() # big endian -> little endian
     return data
+
+
+def lerped_elevation(elevs, lat, lon):
+    lat_secs = max(0.001, min(3599.99, 43*60*60 - lat*60*60))
+    lon_secs = max(0.001, min(3599.99, lon*60*60 - 18*60*60))
+
+    lat1 = math.floor(lat_secs)
+    lat2 = math.ceil(lat_secs)
+    lon1 = math.floor(lon_secs)
+    lon2 = math.ceil(lon_secs)
+
+    points = [(lat1, lon1), (lat1, lon2), (lat2, lon1), (lat2, lon2)]
+
+    elevations = [elevs[plat*3601 + plon] for (plat, plon) in points]
+
+    def lerp(l, e1, e2):
+        return (l % 1)*e2 + (1 - (l % 1))*e1
+
+    lerped1 = lerp(lon_secs, elevations[0], elevations[1])
+    lerped2 = lerp(lon_secs, elevations[2], elevations[3])
+    lerpboth = lerp(lat_secs, lerped1, lerped2)
+
+    return lerpboth
 
 
 def elevation_idx(lat, lon):
@@ -133,8 +156,7 @@ def build_path(id_digraph, start, goal, history):
     return lst[::-1]
 
 
-# TODO: figure out if this is an admissible heuristic
-def est_minutes(a, b):
+def toblers(a, b):
     '''Use Tobler's Hiking Function to estimate the amount of time it takes to travel from a to b'''
     xy_dist = math.sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
     if xy_dist == 0:
@@ -147,13 +169,52 @@ def est_minutes(a, b):
     return minutes
 
 
+def toblers_heuristic(a, b):
+    '''
+    toblers never exceeds 6 km/h
+    so an admissible heuristic is 6 km/h in a straight line
+    '''
+    xy_m = math.sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
+    m_per_min = 6000/60
+    minutes = xy_m/m_per_min
+    return minutes
+
+
+def naismith(a, b):
+    '''get time to travel from a to b using naismiths with langmuir corrections'''
+    xy_m = math.sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
+    minutes = 60*xy_m/4000
+    z_m = (b.z_m - a.z_m)
+    deg = math.atan2(z_m, xy_m)*180/math.pi
+
+    if deg < -12:
+        minutes += 10*z_m/300
+    elif -5 < deg < -12:
+        minutes -= 10*z_m/300
+    elif (deg > 0):
+        minutes += 60*z_m/600
+
+    return minutes
+
+
+def naismith_heuristic(a, b):
+    '''
+    naismith with langmuir corrections never exceeds 8 km/h
+    so an admissable heuristic is 8 km/h in a straight line
+    '''
+    xy_m = math.sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
+    m_per_min = 8000/60
+    minutes = xy_m/m_per_min
+    return minutes
+
+
 def a_star(id_digraph, id_to_data, start, goal):
     history = {}
     frontier = [(0, start)] # a priority queue [(cost, node), ...] 
     path_costs = defaultdict(int) # updated throughout search
 
     def heuristic(node_id):
-        return est_minutes(id_to_data[node_id], id_to_data[goal])
+        return toblers_heuristic(id_to_data[node_id], id_to_data[goal])
 
     while len(frontier) != 0:
         (cost, cur_node) = heappop(frontier)
@@ -162,7 +223,7 @@ def a_star(id_digraph, id_to_data, start, goal):
             return (path, path_costs[goal])
 
         for successor in id_digraph[cur_node]:
-            new_path_cost = path_costs[cur_node] + est_minutes(id_to_data[cur_node], id_to_data[successor])
+            new_path_cost = path_costs[cur_node] + toblers(id_to_data[cur_node], id_to_data[successor])
             if successor not in history or new_path_cost < path_costs[successor]:
                 history[successor] = cur_node
                 path_costs[successor] = new_path_cost
@@ -215,6 +276,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Find the fastest walking paths through Dubrovnik.')
     parser.add_argument('source', type=str, nargs=1, help='The source node ID or street name')
     parser.add_argument('destination', type=str, nargs=1, help='The destination node ID or street name')
-    parser.add_argument('--show', action='store_true', help='Show the best path on the map')
+    parser.add_argument('--show', action='store_true', help='Show the best path on a graphical map')
     args = parser.parse_args()
     run(args.source, args.destination, args.show) 
