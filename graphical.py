@@ -42,7 +42,10 @@ class MyWin(Frame):
     Here is a Tkinter window with a canvas, a button, and a text label
     ''' 
 
-    def __init__(self, master, id_digraph, id_to_data, optimal_path, cost):
+    def __init__(self, master, id_digraph, id_to_data, path, cost):
+        self.id_to_data = id_to_data
+        self.path = path
+
         self.last_x = 0
         self.last_y = 0
         self.scale = 1
@@ -57,6 +60,7 @@ class MyWin(Frame):
         w.configure(yscrollincrement='1')
         w.configure(xscrollincrement='1')
 
+        # click drag
         w.bind("<Button-1>", self.click)
         w.bind("<B1-Motion>", self.move)
 
@@ -67,25 +71,36 @@ class MyWin(Frame):
         self.canvas = w
          
         self.lines = create_lines(id_digraph, id_to_data)
+
+        pathdata = [id_to_data[nd_id] for nd_id in path]
+        self.path = [norm(nd.x_m, nd.y_m) for nd in pathdata]
+
         self.update_lines()
 
-        w.pack(fill=BOTH) # put canvas in window, fill the window
-
-        #cb = Button(thewin, text="Button", command=)
-        # put the button in the window, on the right
-        # I really have not much idea how Python/Tkinter layout managers work
-        #cb.pack(side=RIGHT,pady=5)
+        w.pack(fill=BOTH)
 
         thewin.pack()
 
 
     def update_lines(self):
         self.canvas.delete("all")
+
+        wd = WINWIDTH
+        h = WINHEIGHT
+        s = self.scale
         for (lon1, lat1), (lon2, lat2) in self.lines:
-            wd = WINWIDTH
-            h = WINHEIGHT
-            s = self.scale
-            self.canvas.create_line(s*wd*lon1, s*h*lat1, s*wd*lon2, s*h*lat2)
+            self.canvas.create_line(s*wd*lon1, s*h*lat1, s*wd*lon2, s*h*lat2, fill='grey')
+
+        '''
+        for i in range(0, 3601):
+            self.canvas.create_line(s*wd*float(i)/3600, 0, s*wd*float(i)/3600, 1*s*h)
+
+        for i in range(0, 3601):
+            self.canvas.create_line(0, s*h*float(i)/3600, 1*s*wd, s*wd*float(i)/3600)
+        '''
+
+        paths2 = [(s*wd*lon, s*h*lat) for (lon, lat) in self.path]
+        self.canvas.create_line(*paths2, fill='red')
 
 
     def shift(self, dx, dy):
@@ -117,13 +132,9 @@ class MyWin(Frame):
         self.last_x = event.x
         self.last_y = event.y
 
-if __name__ == '__main__':
-    id_digraph, ways, id_to_data = lab1.read_xml('dbv.osm', 'N42E018.HGT')
-    optimal_path, cost = None, None
-    #optimal_path, cost = lab1.a_star(id_digraph, id_to_data, 'A', 'E')
 
+def display(graph, data, path, cost):
+    """Display the map (as a graph of node ids) and the given path through it (a list of node ids)"""
     master = Tk()
-    thewin = MyWin(master, id_digraph, id_to_data, optimal_path, cost)
-
-    # in Python you have to start the event loop yourself:
+    thewin = MyWin(master, graph, data, path, cost)
     mainloop()
