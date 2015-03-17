@@ -133,10 +133,6 @@ def build_path(id_digraph, start, goal, history):
     return lst[::-1]
 
 
-def dist(a, b):
-    return math.sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
-
-
 # TODO: figure out if this is an admissible heuristic
 def est_minutes(a, b):
     '''Use Tobler's Hiking Function to estimate the amount of time it takes to travel from a to b'''
