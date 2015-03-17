@@ -3,7 +3,6 @@ from collections import defaultdict, namedtuple
 from heapq import heappush, heappop
 import math
 import array
-import struct
 import sys
 import argparse
 import graphical
@@ -176,34 +175,6 @@ def toblers_heuristic(a, b):
     '''
     xy_m = math.sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
     m_per_min = 6000/60
-    minutes = xy_m/m_per_min
-    return minutes
-
-
-def naismith(a, b):
-    '''get time to travel from a to b using naismiths with langmuir corrections'''
-    xy_m = math.sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
-    minutes = 60*xy_m/4000
-    z_m = (b.z_m - a.z_m)
-    deg = math.atan2(z_m, xy_m)*180/math.pi
-
-    if deg < -12:
-        minutes += 10*z_m/300
-    elif -5 < deg < -12:
-        minutes -= 10*z_m/300
-    elif (deg > 0):
-        minutes += 60*z_m/600
-
-    return minutes
-
-
-def naismith_heuristic(a, b):
-    '''
-    naismith with langmuir corrections never exceeds 8 km/h
-    so an admissable heuristic is 8 km/h in a straight line
-    '''
-    xy_m = math.sqrt((b.x_m - a.x_m)**2 + (b.y_m - a.y_m)**2)
-    m_per_min = 8000/60
     minutes = xy_m/m_per_min
     return minutes
 
