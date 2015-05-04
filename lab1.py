@@ -92,6 +92,15 @@ def read_elevations(elevations_path):
 
 
 def lerped_elevation(elevs, lat, lon):
+    '''
+    Get the linearly interpolated elevation between the closest four.
+    It does this by first interpolating the top two and bottom two separately,
+    then interpolating between the resulting top and bottom.
+
+    See
+    http://transition.fcc.gov/ftp/Bureaus/Mass_Media/Databases/documents_collection/84-341.pdf
+    '''
+
     lat_secs = max(0.001, min(3599.99, 43*60*60 - lat*60*60))
     lon_secs = max(0.001, min(3599.99, lon*60*60 - 18*60*60))
 
@@ -129,6 +138,7 @@ def elevation_idx(lat, lon):
 
 
 def read_xml(xml_path, elevations_path):
+    """Return a tuple of (graph, ways, data)"""
     tree = ET.parse(xml_path)
     root = tree.getroot()
     
@@ -180,6 +190,7 @@ def toblers_heuristic(a, b):
 
 
 def a_star(id_digraph, id_to_data, start, goal):
+    """Return the tuple (path, path_cost), or None if no path is found."""
     history = {}
     frontier = [(0, start)] # a priority queue [(cost, node), ...] 
     path_costs = defaultdict(int) # updated throughout search

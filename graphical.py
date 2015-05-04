@@ -1,11 +1,10 @@
-import lab1
-from lab1 import m_per_lat, m_per_lon
-
 try:
     from Tkinter import *
 except:
     from tkinter import *
 
+m_per_lat = 111000
+m_per_lon = 82000
 
 WINWIDTH = 600
 WINHEIGHT = 600
