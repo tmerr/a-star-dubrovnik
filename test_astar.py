@@ -21,5 +21,5 @@ def test_a_star():
         'G': nodedata(1, 0, 0),
     }
 
-    (optimal_path, cost) = astar(id_digraph, id_to_data, 'A', 'E')
+    (optimal_path, cost) = astar(toblers, toblers_heuristic, id_digraph, id_to_data, 'A', 'E')
     assert optimal_path == ['A', 'B', 'D', 'E']

@@ -4,7 +4,7 @@ import math
 import array
 import sys
 import argparse
-import graphical
+import graphics
 import astar
 
 from astar import nodedata
@@ -188,13 +188,13 @@ def run(source, destination, show):
     print('time: {:.2f} minutes\n'.format(result[1]))
 
     if show:
-        graphical.display(graph, data, result[0], result[1])
+        graphics.display(graph, data, result[0], result[1])
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Find the fastest walking paths through Dubrovnik.')
     parser.add_argument('source', type=str, nargs=1, help='The source node ID or street name')
     parser.add_argument('destination', type=str, nargs=1, help='The destination node ID or street name')
-    parser.add_argument('--show', action='store_true', help='Show the best path on a graphical map')
+    parser.add_argument('--show', action='store_true', help='Show the best path on a graphics map')
     args = parser.parse_args()
     run(args.source, args.destination, args.show) 
