@@ -25,16 +25,16 @@ def test_linear_model_with_bias():
     assert approx_eq(model([3, b]), 7)
 
 
-def test_partitioned_example_lengths():
+def test_partition_walks_lengths():
     examples = [x for x in range(100)]
-    training, test = partition_examples(examples, 'seed')
+    training, test = partition_walks(examples, 'seed')
     assert len(training) == 70
     assert len(test) == 30
     assert set(training + test) == set(examples)
 
 
-def test_partitioned_example_predictability():
+def test_partition_walks_predictability():
     examples = [x for x in range(100)]
-    a = partition_examples(examples, 'seed')
-    b = partition_examples(examples, 'seed')
+    a = partition_walks(examples, 'seed')
+    b = partition_walks(examples, 'seed')
     assert a == b
