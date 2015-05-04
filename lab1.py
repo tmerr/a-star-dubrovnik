@@ -6,6 +6,8 @@ import sys
 import argparse
 import graphics
 import astar
+import config
+import models
 
 from astar import nodedata
 
@@ -153,8 +155,8 @@ def read_xml(xml_path, elevations_path):
     return (graph, ways, data)
 
 
-def run(source, destination, show):
-    (graph, ways, data) = read_xml('dbv.osm', 'N42E018.HGT')
+def run(source, destination, show, prediction):
+    (graph, ways, data) = read_xml(config.osm_path, config.elev_path)
     source = sys.argv[1].lower()
     dest = sys.argv[2].lower()
 
@@ -178,14 +180,32 @@ def run(source, destination, show):
             print('Destination must be a valid node ID or a street name')
             return
     
+    costfunc = None
+    heuristic = None
+    if prediction == 'toblers':
+        costfunc = astar.toblers
+        heuristic = astar.toblers_heuristic
+    if prediction in ('linear', 'nearest'):
+        walks = models.read_walk_data(config.walk_data_path, graph, data)
+        training_walks, test_walks = models.partition_walks(walks)
+        if prediction == 'linear':
+            model = models.linear_model(models.build_dist_elev_examples(training_walks, data))
+            costfunc = lambda a, b: model([astar.euclidean(a, b), b.z_m - a.z_m])
+            heuristic = costfunc
+        elif prediction == 'nearest':
+            model = models.nearest_neighbor_model(models.build_dist_elev_examples(training_walks, data))
+            costfunc = lambda a, b: model([astar.euclidean(a, b), b.z_m - a.z_m])
+            heuristic = lambda a, b: 0
 
-    result = astar.astar(astar.toblers, astar.toblers_heuristic, graph, data, source, dest)
+    result = astar.astar(costfunc, heuristic, graph, data, source, dest)
     if result is None:
         print('No path to destination found')
 
     pathstr = ', '.join((str(nd) for nd in result[0]))
     print('\npath: {}\n'.format(pathstr))
     print('time: {:.2f} minutes\n'.format(result[1]))
+
+    walk_data = models.read_walk_data(config.walk_data_path, graph, data)
 
     if show:
         graphics.display(graph, data, result[0], result[1])
@@ -195,6 +215,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Find the fastest walking paths through Dubrovnik.')
     parser.add_argument('source', type=str, nargs=1, help='The source node ID or street name')
     parser.add_argument('destination', type=str, nargs=1, help='The destination node ID or street name')
+    parser.add_argument('prediction', choices=['toblers', 'linear', 'nearest'])
     parser.add_argument('--show', action='store_true', help='Show the best path on a graphics map')
     args = parser.parse_args()
-    run(args.source, args.destination, args.show) 
+    run(args.source, args.destination, args.show, args.prediction)
