@@ -8,6 +8,7 @@ import graphics
 import astar
 import config
 import models
+import random
 
 from astar import nodedata
 
@@ -155,7 +156,7 @@ def read_xml(xml_path, elevations_path):
     return (graph, ways, data)
 
 
-def run(source, destination, show, prediction):
+def run(source, destination, show, prediction, seed):
     (graph, ways, data) = read_xml(config.osm_path, config.elev_path)
     source = sys.argv[1].lower()
     dest = sys.argv[2].lower()
@@ -187,13 +188,15 @@ def run(source, destination, show, prediction):
         heuristic = astar.toblers_heuristic
     if prediction in ('linear', 'nearest'):
         walks = models.read_walk_data(config.walk_data_path, graph, data)
-        training_walks, test_walks = models.partition_walks(walks)
+        training_walks, test_walks = models.partition_walks(walks, seed=seed)
+        train = models.build_dist_elev_examples(training_walks, data)
+        test = models.build_dist_elev_examples(test_walks, data)
         if prediction == 'linear':
-            model = models.linear_model(models.build_dist_elev_examples(training_walks, data))
+            model = models.linear_model(train)
             costfunc = lambda a, b: model([astar.euclidean(a, b), b.z_m - a.z_m])
             heuristic = costfunc
         elif prediction == 'nearest':
-            model = models.nearest_neighbor_model(models.build_dist_elev_examples(training_walks, data))
+            model = models.nearest_neighbor_model(train)
             costfunc = lambda a, b: model([astar.euclidean(a, b), b.z_m - a.z_m])
             heuristic = lambda a, b: 0
 
@@ -205,17 +208,22 @@ def run(source, destination, show, prediction):
     print('\npath: {}\n'.format(pathstr))
     print('time: {:.2f} minutes\n'.format(result[1]))
 
-    walk_data = models.read_walk_data(config.walk_data_path, graph, data)
+    #walk_data = models.read_walk_data(config.walk_data_path, graph, data)
+    #print(walk_data)
+    #if seed == None:
+    #    seed = random.random()
+    #models.compare_models(walk_data, data, seed)
 
     if show:
         graphics.display(graph, data, result[0], result[1])
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Find the fastest walking paths through Dubrovnik.')
-    parser.add_argument('source', type=str, nargs=1, help='The source node ID or street name')
-    parser.add_argument('destination', type=str, nargs=1, help='The destination node ID or street name')
+    parser = argparse.ArgumentParser(description='find the fastest walking paths through Dubrovnik.')
+    parser.add_argument('source', type=str, nargs=1, help='the source node ID or street name')
+    parser.add_argument('destination', type=str, nargs=1, help='the destination node ID or street name')
     parser.add_argument('prediction', choices=['toblers', 'linear', 'nearest'])
-    parser.add_argument('--show', action='store_true', help='Show the best path on a graphics map')
+    parser.add_argument('--show', action='store_true', help='show the best path on a graphics map')
+    parser.add_argument('-seed', type=float, help='use the given random seed to select the training set')
     args = parser.parse_args()
-    run(args.source, args.destination, args.show, args.prediction)
+    run(args.source, args.destination, args.show, args.prediction, args.seed)

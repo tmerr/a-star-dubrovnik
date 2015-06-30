@@ -69,6 +69,7 @@ def linear_model(examples):
     X = np.matrix([xvec for (xvec, _) in examples])
     y = np.matrix([[e] for (_, e) in examples])
     ws = (X.T * X).I * X.T * y
+    print(ws)
     return lambda xs: float(sum([w*x for w, x in zip(ws, xs)]))
 
 
@@ -140,8 +141,13 @@ def build_dist_2elev_examples(walks, id_to_data):
     return result
 
 
-def compare_models(walks, id_to_data):
-    sharedseed = random.random()
+def pw(wsz):
+    ws = [w for w in wsz if w[-2] == 'tfm']
+    wstest = [w for w in wsz if w[-2] != 'tfm']
+    print(wstest)
+    return ws, wstest
+
+def compare_models(walks, id_to_data, sharedseed):
     trainingA, testA = partition_walks(build_dist_examples(walks, id_to_data), seed=sharedseed)
     trainingB, testB = partition_walks(build_dist_elev_examples(walks, id_to_data), seed=sharedseed)
     trainingC, testC = partition_walks(build_dist_2elev_examples(walks, id_to_data), seed=sharedseed)
