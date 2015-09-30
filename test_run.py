@@ -1,4 +1,4 @@
-from lab1 import *
+from run import *
 
 def test_elevation_idx():
     assert elevation_idx(43, 18) == 0
